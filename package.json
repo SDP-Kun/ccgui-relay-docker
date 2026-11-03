@@ -1,0 +1,18 @@
+{
+  "name": "ccgui-relay-docker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted relay for CC GUI remote access, as a Docker image",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

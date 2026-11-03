@@ -1,0 +1,26 @@
+name: ccgui-relay
+
+services:
+  relay:
+    image: ghcr.io/sdp-kun/ccgui-relay-docker:latest
+    container_name: ccgui-relay
+    restart: unless-stopped
+    environment:
+      RELAY_KEY: ${RELAY_KEY:?请先在 .env 中设置 RELAY_KEY}
+      # PORT: 8787
+      # HEAD_TIMEOUT_MS: 30000
+      # MAX_BODY_BYTES: 67108864
+    # 只绑定回环地址，由同机的 Caddy/Nginx 终止 TLS。
+    # 需要从局域网直连（或前面是另一台机器）时改成 "8787:8787"。
+    ports:
+      - "127.0.0.1:${RELAY_PORT:-8787}:8787"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

@@ -1,0 +1,10 @@
+node_modules
+.git
+.github
+test
+compose.yaml
+.env
+.env.*
+*.md
+.DS_Store
+npm-debug.log*
