@@ -49,6 +49,37 @@ docker run -d --name ccgui-relay --restart unless-stopped \
 
 > 换 `RELAY_KEY` 等于换命名空间，手机端需要重新配对。
 
+## 多台桌面端（多个 CC GUI 宿主）
+
+**一个中继容器只服务一台桌面端。**
+
+桌面端与中继之间是一对一的 WebSocket，协议里没有第二个身份维度可以区分不同的 CC GUI 实例。两台桌面端填同一个地址和密钥时，新连接会以 `1012` 顶掉旧连接；双方自动重连后就会每秒互相踢一次——表现为「只有一个通」，容器日志里会出现大量 `agent connected`。
+
+要让多台 CC GUI 同时在线，**每台桌面端各起一个容器，各用一套密钥和端口**：
+
+```yaml
+services:
+  relay-a:
+    image: ghcr.io/sdp-kun/ccgui-relay-docker:latest
+    restart: unless-stopped
+    environment:
+      RELAY_KEY: ${RELAY_KEY_A}
+    ports:
+      - "8787:8787"
+
+  relay-b:
+    image: ghcr.io/sdp-kun/ccgui-relay-docker:latest
+    restart: unless-stopped
+    environment:
+      RELAY_KEY: ${RELAY_KEY_B}
+    ports:
+      - "8788:8787"
+```
+
+桌面端 A 填 `https://relay.example.com:8787`，B 填 `https://relay.example.com:8788`，密钥各用各的。前面放 Caddy/Nginx 时，为每个端口（或每个子域名）各写一条反代即可。
+
+> 同一域名、不同端口会共享浏览器 cookie；同一部手机在两个地址之间切换时需要重新配对。需要完全隔离时，请为每台桌面端使用独立子域名。
+
 ## 环境变量
 
 | 变量 | 默认值 | 说明 |
@@ -137,7 +168,7 @@ docker run --rm -e RELAY_KEY=dev-secret-at-least-16-chars -p 8787:8787 ccgui-rel
 
 ## 工作方式与限制
 
-- 一个密钥对应一个桌面端：新连接会踢掉旧连接（关闭码 1012），和 Worker 版一致。
+- 一个密钥对应一个桌面端：新连接会踢掉旧连接（关闭码 1012），和 Worker 版一致。多台桌面端请各起一个容器，见上文「多台桌面端」。
 - 所有流都保存在进程内存里，**不要横向扩多个副本**；单容器即可。
 - 不需要卷、不需要数据库；容器重启后桌面端会自动重连。
 - 桌面端与中继之间走的是明文 WebSocket（由前面那层 TLS 保护），请勿把 `8787` 直接暴露到公网。
